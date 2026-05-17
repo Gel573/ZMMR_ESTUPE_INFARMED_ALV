@@ -9,7 +9,7 @@ TYPE-POOLS: ICON.
 TABLES: MARA,MSEG.
 
 *----------------------------------------------------------------------*
-* Tipos de saída (tabela final do ALV)
+* Tipos de saÃ­da (tabela final do ALV)
 *----------------------------------------------------------------------*
 TYPES: BEGIN OF TY_OUT,
          MATNR     TYPE MATNR18,
@@ -24,12 +24,12 @@ TYPES: BEGIN OF TY_OUT,
          TIPO      TYPE CHAR2,     "EN / SD
          MENGE     TYPE MENGE_D,
          MEINS     TYPE MEINS,
-         STOCK     TYPE MENGE_D,   "saldo após movimento
-         LOTE      TYPE CHARG_D,
-         SERV_FORN TYPE CHAR80,
-         DESCR     TYPE CHAR80,
-         "internos p/ lógica/ordenação
-         BWART     TYPE BWART,
+TYPES: BEGIN OF TY_VENDOR,
+  MBLNR TYPE MBLNR,
+  MJAHR TYPE MJAHR,
+  LIFNR TYPE LIFNR,
+  NAME1 TYPE LFA1-NAME1,
+END OF TY_VENDOR.
          MJAHR     TYPE MJAHR,
          EBELN     TYPE EBELN,
          EBELP     TYPE EBELP,
@@ -46,7 +46,7 @@ TYPES: BEGIN OF TY_VENDOR,
 END OF TY_VENDOR.
 
 *----------------------------------------------------------------------*
-* Tipos auxiliares (para seleção base)
+* Tipos auxiliares (para seleÃ§Ã£o base)
 *----------------------------------------------------------------------*
 TYPES: BEGIN OF TY_BASE,
          BUDAT TYPE BUDAT,
@@ -112,7 +112,7 @@ RANGES: R_BWART    FOR MSEG-BWART,
         R_BWART_SD FOR MSEG-BWART.
 
 CONSTANTS:
-  C_UCOMM_INFARMED TYPE SYUCOMM VALUE 'ZINFM',          "novo botão
+  C_UCOMM_INFARMED TYPE SYUCOMM VALUE 'ZINFM',          "novo botÃ£o
   C_UCOMM_REFRESH  TYPE SYUCOMM VALUE 'ZREF',
   C_UCOMM_SELALL   TYPE SYUCOMM VALUE 'ZALL',
   C_UCOMM_DESELALL TYPE SYUCOMM VALUE 'ZNONE',

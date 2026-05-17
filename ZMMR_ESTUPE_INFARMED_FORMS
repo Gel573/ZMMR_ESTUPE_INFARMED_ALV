@@ -7,7 +7,7 @@
 *&---------------------------------------------------------------------*
 
 *---------------------------------------------------------------------*
-* GET_DATA - LÍ movimentos do ano e monta GT_OUT
+* GET_DATA - L√™ movimentos do ano e monta GT_OUT
 *---------------------------------------------------------------------*
 FORM GET_DATA .
 
@@ -74,14 +74,14 @@ FORM GET_DATA .
 
   "Fornecedor por PO (EKKO -> LFA1)
   CLEAR GT_VENDOR[].
-  SELECT M~MBLNR L~LIFNR L~NAME1
+  SELECT M~MBLNR M~MJAHR L~LIFNR L~NAME1
   FROM MSEG AS M INNER JOIN LFA1 AS L
   ON L~LIFNR = M~LIFNR
   INTO TABLE GT_VENDOR
   FOR ALL ENTRIES IN LT_BASE
   WHERE MBLNR EQ LT_BASE-MBLNR
   AND   MJAHR EQ LT_BASE-MJAHR.
-  SORT GT_VENDOR BY MBLNR.
+  SORT GT_VENDOR BY MBLNR MJAHR.
 *  SELECT E~EBELN L~LIFNR L~NAME1
 *  FROM EKKO AS E
 *  INNER JOIN LFA1 AS L
@@ -91,7 +91,7 @@ FORM GET_DATA .
 *  WHERE E~EBELN = LT_BASE-EBELN.
 *  SORT LT_VENDOR BY EBELN.
 
-  "ServiÁo por Centro de Custo (CSKT)
+  "Servi√ßo por Centro de Custo (CSKT)
   CLEAR LT_CSKT.
   SELECT *
   FROM CSKT
@@ -151,8 +151,8 @@ FORM GET_DATA .
       LS_OUT-MENGE = - ABS( LS_OUT-MENGE ).
     ENDIF.
 
-    "Texto material (subst‚ncia activa)
-    READ TABLE LT_MAKT ASSIGNING FIELD-SYMBOL(<T>)
+      WITH KEY MBLNR = LS_OUT-MBLNR MJAHR = LS_OUT-MJAHR BINARY SEARCH.
+      WITH KEY MBLNR = <O>-MBLNR MJAHR = <O>-MJAHR BINARY SEARCH.
     WITH KEY MATNR = LS_OUT-MATNR BINARY SEARCH.
     IF SY-SUBRC = 0.
       LS_OUT-MAKTX = <T>-MAKTX.
@@ -199,8 +199,10 @@ ENDFORM.
 
 *---------------------------------------------------------------------*
 * CALC_STOCK
-* - Stock por Material/Centro/DepÛsito (sem lote)
-* - LÍ MARD-LABST com chave MATNR + WERKS + LGORT
+        LS_RET   TYPE BAPIRET2_TAB,
+        LV_LIFNR TYPE LIFNR.
+    CLEAR: LV_LIFNR, LV_FREE, LS_RET.
+        LV_LIFNR = <V>-LIFNR.
 * - Move para GT_OUT-STOCK
 *---------------------------------------------------------------------*
 FORM CALC_STOCK .
@@ -279,7 +281,7 @@ FORM BUILD_FCAT CHANGING CT_FCAT TYPE LVC_T_FCAT.
         LS-OUTPUTLEN = LS_CFG-OUTPUTLEN.
       ENDIF.
 
-      "invisÌvel
+      "invis√≠vel
       IF LS_CFG-INVISIVEL = 'X'.
         LS-NO_OUT = ABAP_TRUE.
       ENDIF.
@@ -308,21 +310,21 @@ FORM BUILD_FCAT CHANGING CT_FCAT TYPE LVC_T_FCAT.
     RETURN.
   ENDIF.
 
-  "Fallback (se ainda n„o estiver populada)
+  "Fallback (se ainda n√£o estiver populada)
   PERFORM BUILD_FCAT_FALLBACK CHANGING CT_FCAT.
 
 ENDFORM.
 
 
 *---------------------------------------------------------------------*
-* BUILD_LAYOUT - Layout padr„o do ALV
+* BUILD_LAYOUT - Layout padr√£o do ALV
 *---------------------------------------------------------------------*
 FORM BUILD_LAYOUT CHANGING CS_LAYO TYPE LVC_S_LAYO.
 
   CLEAR CS_LAYO.
   CS_LAYO-ZEBRA      = ABAP_TRUE.
   CS_LAYO-CWIDTH_OPT = ABAP_TRUE. "otimiza largura automaticamente
-  CS_LAYO-SEL_MODE   = 'A'.       "seleÁ„o de linha(s)
+  CS_LAYO-SEL_MODE   = 'A'.       "sele√ß√£o de linha(s)
   CS_LAYO-NO_TOOLBAR = ABAP_FALSE.
 
 ENDFORM.
@@ -363,15 +365,15 @@ ENDFORM.
 
 
 *---------------------------------------------------------------------*
-* WRITE_LIST_FOR_PDF - Escreve o conte˙do como LIST (para spool)
+* WRITE_LIST_FOR_PDF - Escreve o conte√∫do como LIST (para spool)
 *---------------------------------------------------------------------*
 FORM WRITE_LIST_FOR_PDF USING IT_OUT TYPE STANDARD TABLE.
 
   FIELD-SYMBOLS <O> TYPE TY_OUT.
 
-  "CabeÁalho
-  WRITE: / 'Listagem ObrigatÛria para artigos Estupefacientes (INFARMED)'.
-  WRITE: / 'Ano:', P_ANO, '  Data geraÁ„o:', SY-DATUM.
+  "Cabe√ßalho
+  WRITE: / 'Listagem Obrigat√≥ria para artigos Estupefacientes (INFARMED)'.
+  WRITE: / 'Ano:', P_ANO, '  Data gera√ß√£o:', SY-DATUM.
   ULINE.
 
   "Colunas (ajuste como quiser)
@@ -416,7 +418,7 @@ CHANGING CT_SEL  TYPE STANDARD TABLE.
       ET_INDEX_ROWS = LT_ROWS.
 
   IF LT_ROWS IS INITIAL.
-    "Sem seleÁ„o -> pega tudo que est· no ALV
+    "Sem sele√ß√£o -> pega tudo que est√° no ALV
     LOOP AT GT_OUT ASSIGNING <WA>.
       APPEND <WA> TO CT_SEL.
     ENDLOOP.
@@ -442,15 +444,15 @@ FORM BUILD_FCAT_FALLBACK CHANGING CT_FCAT TYPE LVC_T_FCAT.
   CLEAR LS. LS-FIELDNAME = 'REGISTO'.   LS-COLTEXT = 'Registo'.        LS-OUTPUTLEN = 20. APPEND LS TO CT_FCAT.
   CLEAR LS. LS-FIELDNAME = 'DOCUMENTO'. LS-COLTEXT = 'Documento'.      LS-OUTPUTLEN = 25. APPEND LS TO CT_FCAT.
   CLEAR LS. LS-FIELDNAME = 'MATNR'.     LS-COLTEXT = 'Cod. Artigo'.    LS-OUTPUTLEN = 18. APPEND LS TO CT_FCAT.
-  CLEAR LS. LS-FIELDNAME = 'MAKTX'.     LS-COLTEXT = 'Subst‚ncia Ativa'. LS-OUTPUTLEN = 40. APPEND LS TO CT_FCAT.
+  CLEAR LS. LS-FIELDNAME = 'MAKTX'.     LS-COLTEXT = 'Subst√¢ncia Ativa'. LS-OUTPUTLEN = 40. APPEND LS TO CT_FCAT.
   CLEAR LS. LS-FIELDNAME = 'TIPO'.      LS-COLTEXT = 'Tipo'.           LS-OUTPUTLEN = 4.  APPEND LS TO CT_FCAT.
   CLEAR LS. LS-FIELDNAME = 'MENGE'.     LS-COLTEXT = 'Quant.'.         LS-OUTPUTLEN = 13. LS-JUST = 'R'. APPEND LS TO CT_FCAT.
   CLEAR LS. LS-FIELDNAME = 'MEINS'.     LS-COLTEXT = 'Unid.'.          LS-OUTPUTLEN = 5.  APPEND LS TO CT_FCAT.
   CLEAR LS. LS-FIELDNAME = 'STOCK'.     LS-COLTEXT = 'Stock'.          LS-OUTPUTLEN = 13. LS-JUST = 'R'. APPEND LS TO CT_FCAT.
   CLEAR LS. LS-FIELDNAME = 'WERKS'.     LS-COLTEXT = 'Centro'.         LS-OUTPUTLEN = 6.  APPEND LS TO CT_FCAT.
-  CLEAR LS. LS-FIELDNAME = 'LGORT'.     LS-COLTEXT = 'DepÛsito'.       LS-OUTPUTLEN = 6.  APPEND LS TO CT_FCAT.
+  CLEAR LS. LS-FIELDNAME = 'LGORT'.     LS-COLTEXT = 'Dep√≥sito'.       LS-OUTPUTLEN = 6.  APPEND LS TO CT_FCAT.
   CLEAR LS. LS-FIELDNAME = 'SERV_FORN'. LS-COLTEXT = 'Serv./Forn.'.    LS-OUTPUTLEN = 25. APPEND LS TO CT_FCAT.
-  CLEAR LS. LS-FIELDNAME = 'DESCR'.     LS-COLTEXT = 'DescriÁ„o'.      LS-OUTPUTLEN = 40. APPEND LS TO CT_FCAT.
+  CLEAR LS. LS-FIELDNAME = 'DESCR'.     LS-COLTEXT = 'Descri√ß√£o'.      LS-OUTPUTLEN = 40. APPEND LS TO CT_FCAT.
   CLEAR LS. LS-FIELDNAME = 'CONSU'.     LS-COLTEXT = 'Consumo'.LS-OUTPUTLEN = 30. APPEND LS TO CT_FCAT.
 
 ENDFORM.
@@ -468,29 +470,29 @@ CHANGING CV_PO    TYPE EBELN
 
   LV = IV_REG.
 
-  "Separar por espaÁo e '/'
+  "Separar por espa√ßo e '/'
   REPLACE ALL OCCURRENCES OF '/' IN LV WITH SPACE.
   CONDENSE LV.
 
   SPLIT LV AT SPACE INTO TABLE LT.
 
   LOOP AT LT INTO WA.
-    "PO normalmente 10 dÌgitos
+    "PO normalmente 10 d√≠gitos
     IF WA CO '0123456789' AND STRLEN( WA ) = 10 AND CV_PO IS INITIAL.
       CV_PO = WA.
       CONTINUE.
     ENDIF.
 
-    "PR BANFN normalmente 10 dÌgitos tambÈm (depende do customizing)
+    "PR BANFN normalmente 10 d√≠gitos tamb√©m (depende do customizing)
     IF WA CO '0123456789' AND STRLEN( WA ) = 10 AND CV_PR IS INITIAL.
-      "se j· achou PO, n„o confunde
+      "se j√° achou PO, n√£o confunde
       IF CV_PO IS INITIAL.
         CV_PR = WA.
       ENDIF.
       CONTINUE.
     ENDIF.
 
-    "Doc material MBLNR È 10 dÌgitos (muito comum)
+    "Doc material MBLNR √© 10 d√≠gitos (muito comum)
     IF WA CO '0123456789' AND STRLEN( WA ) = 10 AND CV_MBLNR IS INITIAL.
       CV_MBLNR = WA.
       CONTINUE.
@@ -500,7 +502,7 @@ CHANGING CV_PO    TYPE EBELN
 ENDFORM.
 
 *---------------------------------------------------------------------*
-* INFARMED - Entrypoint do bot„o no ALV (Gerar INFARMED)
+* INFARMED - Entrypoint do bot√£o no ALV (Gerar INFARMED)
 *---------------------------------------------------------------------*
 FORM INFARMED_POPUP_AND_RUN USING IO_GRID TYPE REF TO CL_GUI_ALV_GRID.
 
@@ -532,7 +534,7 @@ FORM INFARMED_POPUP_AND_RUN USING IO_GRID TYPE REF TO CL_GUI_ALV_GRID.
   ENDIF.
 
   CASE LV_CHOICE.
-    WHEN '1'. "SPOOL com di·logo padr„o
+    WHEN '1'. "SPOOL com di√°logo padr√£o
       PERFORM CALL_SMARTFORM_SPOOL USING LT_ITEMS LS_HEADER LV_DT_INI LV_DT_TERM.
 
     WHEN '2'. "PDF (OTF->PDF) e download/abrir
@@ -551,7 +553,7 @@ ENDFORM.
 
 *---------------------------------------------------------------------*
 * INFARMED_GET_SELECTED_OUT
-* - LÍ seleÁ„o do ALV (ou tudo se nada selecionado)
+* - L√™ sele√ß√£o do ALV (ou tudo se nada selecionado)
 * - Converte GT_OUT (TY_OUT) -> ZTTSESTUPE_ITEM (ZSESTUPE_ITEM)
 *---------------------------------------------------------------------*
 FORM INFARMED_GET_SELECTED_OUT USING IO_GRID TYPE REF TO CL_GUI_ALV_GRID
@@ -571,7 +573,7 @@ CHANGING CT_ITEMS TYPE ZTTSESTUPE_ITEM.
         ET_INDEX_ROWS = LT_ROWS.
   ENDIF.
 
-  "2) ObrigatÛrio selecionar pelo menos 1 linha
+  "2) Obrigat√≥rio selecionar pelo menos 1 linha
   IF LT_ROWS IS INITIAL.
     MESSAGE 'Selecione ao menos uma linha para gerar o INFARMED.' TYPE 'I'.
     RETURN.
@@ -586,7 +588,7 @@ CHANGING CT_ITEMS TYPE ZTTSESTUPE_ITEM.
   ENDLOOP.
 
   IF LT_OUT IS INITIAL.
-    MESSAGE 'SeleÁ„o inv·lida. Tente selecionar novamente.' TYPE 'I'.
+    MESSAGE 'Sele√ß√£o inv√°lida. Tente selecionar novamente.' TYPE 'I'.
     RETURN.
   ENDIF.
 
@@ -606,7 +608,7 @@ FORM INFARMED_ASK_OUTPUT CHANGING CV_CHOICE TYPE C.
   CLEAR: LT_LIST, LS_LIST.
 
   LS_LIST-SELFLAG = 'X'.
-  LS_LIST-VAROPTION  = 'Gerar via SPOOL (com di·logo de impress„o)'.
+  LS_LIST-VAROPTION  = 'Gerar via SPOOL (com di√°logo de impress√£o)'.
   APPEND LS_LIST TO LT_LIST.
 
   CLEAR LS_LIST.
@@ -617,7 +619,7 @@ FORM INFARMED_ASK_OUTPUT CHANGING CV_CHOICE TYPE C.
   CALL FUNCTION 'POPUP_TO_DECIDE_LIST'
     EXPORTING
       TEXTLINE1 = 'INFARMED'
-      TEXTLINE2 = 'Escolha o modo de geraÁ„o'
+      TEXTLINE2 = 'Escolha o modo de gera√ß√£o'
       TITEL     = 'Gerar INFARMED'
     IMPORTING
       ANSWER    = LV_ANS
@@ -625,7 +627,7 @@ FORM INFARMED_ASK_OUTPUT CHANGING CV_CHOICE TYPE C.
       T_SPOPLI  = LT_LIST.
 
   "answer = 'A' se escolheu algo; dependendo do sistema pode variar.
-  "Vamos ler o retorno via SY-TABIX n„o vem; ent„o tratamos simples:
+  "Vamos ler o retorno via SY-TABIX n√£o vem; ent√£o tratamos simples:
   "Se cancel -> lv_ans vazio
   IF LV_ANS IS INITIAL.
     CLEAR CV_CHOICE.
@@ -633,14 +635,14 @@ FORM INFARMED_ASK_OUTPUT CHANGING CV_CHOICE TYPE C.
   ENDIF.
 
   "Alguns sistemas retornam em lv_ans o VAROPTION escolhido:
-  "Se no seu n„o retornar, trocamos para POPUP_GET_VALUES depois.
+  "Se no seu n√£o retornar, trocamos para POPUP_GET_VALUES depois.
   CV_CHOICE = LV_ANS.
 
 ENDFORM.
 
 *---------------------------------------------------------------------*
 * CALL_SMARTFORM_SPOOL
-* - Abre o di·logo padr„o de spool (USER_SETTINGS = 'X')
+* - Abre o di√°logo padr√£o de spool (USER_SETTINGS = 'X')
 *---------------------------------------------------------------------*
 FORM CALL_SMARTFORM_SPOOL USING IT_ITEMS  TYPE ZTTSESTUPE_ITEM
       IS_HEADER TYPE ZSESTUPE_HDR
@@ -663,17 +665,17 @@ FORM CALL_SMARTFORM_SPOOL USING IT_ITEMS  TYPE ZTTSESTUPE_ITEM
       OTHERS             = 3.
 
   IF SY-SUBRC <> 0 OR LV_FM_NAME IS INITIAL.
-    MESSAGE 'Smartform n„o encontrado ou sem FM gerada.' TYPE 'E'.
+    MESSAGE 'Smartform n√£o encontrado ou sem FM gerada.' TYPE 'E'.
     RETURN.
   ENDIF.
 
-  "2) ForÁar di·logo de spool
+  "2) For√ßar di√°logo de spool
   CLEAR: LS_CTRL, LS_COMP.
-  LS_CTRL-NO_DIALOG = SPACE.   "tem di·logo
+  LS_CTRL-NO_DIALOG = SPACE.   "tem di√°logo
   LS_CTRL-PREVIEW   = SPACE.
   LS_CTRL-DEVICE    = 'PRINTER'.
 
-  "3) USER_SETTINGS='X' => abre a janela padr„o de impress„o
+  "3) USER_SETTINGS='X' => abre a janela padr√£o de impress√£o
   CALL FUNCTION LV_FM_NAME
     EXPORTING
       CONTROL_PARAMETERS = LS_CTRL
@@ -721,7 +723,7 @@ FORM PDF_DOWNLOAD_AND_OPEN USING IV_PDF TYPE XSTRING.
   "Timestamp seguro (corrige teu dump REPLACE_INFINITE_LOOP)
   GET TIME STAMP FIELD LV_TS.
   LV_STAMP = LV_TS.
-  "remove tudo que n„o for n˙mero
+  "remove tudo que n√£o for n√∫mero
   REPLACE ALL OCCURRENCES OF REGEX '[^0-9]' IN LV_STAMP WITH ''.
 
   CONCATENATE 'INFARMED_' LV_STAMP '.pdf' INTO LV_FILENAME.
@@ -794,7 +796,7 @@ CHANGING CT_ITEMS TYPE ZTTSESTUPE_ITEM.
   LOOP AT IT_OUT INTO LS_OUT.
     CLEAR LS_ITEM.
 
-    "Mapeamento direto (ajuste campos se necess·rio)
+    "Mapeamento direto (ajuste campos se necess√°rio)
     LS_ITEM-BUDAT     = LS_OUT-BUDAT.
     LS_ITEM-REGISTO   = LS_OUT-REGISTO.
     LS_ITEM-DOCUMENTO = LS_OUT-DOCUMENTO.
@@ -826,7 +828,7 @@ FORM INFARMED_BUILD_HEADER CHANGING CS_HDR  TYPE ZSESTUPE_HDR
   CV_DT_INI  = SY-DATUM.
   CV_DT_TERM = SY-DATUM.
 
-  "Header mÌnimo (ajuste conforme campos existentes na ZSESTUPE_HDR)
+  "Header m√≠nimo (ajuste conforme campos existentes na ZSESTUPE_HDR)
   "Ex.: ANO / DATA_GER / TITULO / ENTIDADE / CENTRO
   CS_HDR-ANO      = SY-DATUM+0(4).
   CS_HDR-DATA_GER = SY-DATUM.
@@ -868,11 +870,11 @@ CHANGING CV_PDF TYPE XSTRING.
       OTHERS             = 3.
 
   IF SY-SUBRC <> 0 OR LV_FM_NAME IS INITIAL.
-    MESSAGE 'Smartform n„o encontrado ou sem FM gerada.' TYPE 'E'.
+    MESSAGE 'Smartform n√£o encontrado ou sem FM gerada.' TYPE 'E'.
     RETURN.
   ENDIF.
 
-  "2) ParametrizaÁ„o para gerar OTF sem di·logo
+  "2) Parametriza√ß√£o para gerar OTF sem di√°logo
   CLEAR: LS_CTRL, LS_COMP.
   LS_CTRL-NO_DIALOG = 'X'.
   LS_CTRL-PREVIEW   = SPACE.
@@ -924,7 +926,7 @@ CHANGING CV_PDF TYPE XSTRING.
 
   IF SY-SUBRC <> 0 OR CV_PDF IS INITIAL.
     CLEAR CV_PDF.
-    MESSAGE 'Erro na convers„o OTF->PDF.' TYPE 'E'.
+    MESSAGE 'Erro na convers√£o OTF->PDF.' TYPE 'E'.
   ENDIF.
 
 ENDFORM.
@@ -941,7 +943,7 @@ FORM ALV_REFRESH.
   PERFORM GET_DATA.
   "Recalcular stock atual
   PERFORM CALC_STOCK.
-  "Refresh no GRID mantendo posiÁ„o (scroll/coluna)
+  "Refresh no GRID mantendo posi√ß√£o (scroll/coluna)
   IF GO_GRID IS BOUND.
 
     CLEAR LS_STBL.
@@ -956,7 +958,7 @@ FORM ALV_REFRESH.
         FINISHED       = 1
         OTHERS         = 2.
 
-    "3) Limpar seleÁ„o apÛs refresh (recomendado)
+    "3) Limpar sele√ß√£o ap√≥s refresh (recomendado)
     CLEAR LT_EMPTY.
     CALL METHOD GO_GRID->SET_SELECTED_ROWS
       EXPORTING
@@ -968,7 +970,7 @@ FORM ALV_REFRESH.
     CALL METHOD CL_GUI_CFW=>FLUSH.
   ENDIF.
 
-  "MESSAGE 'RelatÛrio atualizado. Selecione as linhas novamente.' TYPE 'S'.
+  "MESSAGE 'Relat√≥rio atualizado. Selecione as linhas novamente.' TYPE 'S'.
 ENDFORM.
 
 FORM ALV_SELECT_ALL.
@@ -1047,18 +1049,18 @@ FORM FILL_S_MATNR_FROM_SET.
 
   IF SY-SUBRC <> 0 OR LT_VALUES IS INITIAL.
     "Opcional: aviso
-    "MESSAGE 'SET ZMATNR_FARMED sem valores ou n„o encontrado.' TYPE 'W'.
+    "MESSAGE 'SET ZMATNR_FARMED sem valores ou n√£o encontrado.' TYPE 'W'.
     RETURN.
   ENDIF.
 
   LOOP AT LT_VALUES INTO LS_VALUE.
 
-    "SÛ inclusivos
+    "S√≥ inclusivos
     IF LS_VALUE-SIGN IS NOT INITIAL AND LS_VALUE-SIGN <> 'I'.
       CONTINUE.
     ENDIF.
 
-    "Como o SELECT-OPTION È NO INTERVALS, sÛ aceitamos EQ.
+    "Como o SELECT-OPTION √© NO INTERVALS, s√≥ aceitamos EQ.
     "Se vier BT/CP/etc, ignoramos (ou podes transformar conforme tua regra)
     IF LS_VALUE-OPTION IS NOT INITIAL AND LS_VALUE-OPTION <> 'EQ'.
       CONTINUE.
@@ -1066,7 +1068,7 @@ FORM FILL_S_MATNR_FROM_SET.
 
     CLEAR: LS_RNG, LV_LOW.
 
-    "LOW È CHAR30, converte para MATNR (18) com ALPHA
+    "LOW √© CHAR30, converte para MATNR (18) com ALPHA
     LV_LOW = LS_VALUE-LOW.
     CONDENSE LV_LOW NO-GAPS.
 
@@ -1093,7 +1095,7 @@ ENDFORM.
 
 FORM LOCK_S_MATNR.
   LOOP AT SCREEN.
-    "Tudo do select-option S_MATNR (LOW/HIGH, botıes, etc.)
+    "Tudo do select-option S_MATNR (LOW/HIGH, bot√µes, etc.)
     IF SCREEN-NAME CP 'S_MATNR*'.
       SCREEN-INPUT = 0.
       SCREEN-ACTIVE = 1.
@@ -1124,18 +1126,18 @@ FORM FILL_R_BWART_FROM_SET TABLES LT_BWART TYPE FIP_T_BWART_RANGE
 
   IF SY-SUBRC <> 0 OR LT_VALUES IS INITIAL.
     "Opcional: aviso
-    "MESSAGE 'SET ZMATNR_FARMED sem valores ou n„o encontrado.' TYPE 'W'.
+    "MESSAGE 'SET ZMATNR_FARMED sem valores ou n√£o encontrado.' TYPE 'W'.
     RETURN.
   ENDIF.
 
   LOOP AT LT_VALUES INTO LS_VALUE.
 
-    "SÛ inclusivos
+    "S√≥ inclusivos
     IF LS_VALUE-SIGN IS NOT INITIAL AND LS_VALUE-SIGN <> 'I'.
       CONTINUE.
     ENDIF.
 
-    "Como o SELECT-OPTION È NO INTERVALS, sÛ aceitamos EQ.
+    "Como o SELECT-OPTION √© NO INTERVALS, s√≥ aceitamos EQ.
     "Se vier BT/CP/etc, ignoramos (ou podes transformar conforme tua regra)
     IF LS_VALUE-OPTION IS NOT INITIAL AND LS_VALUE-OPTION <> 'EQ'.
       CONTINUE.
@@ -1143,7 +1145,7 @@ FORM FILL_R_BWART_FROM_SET TABLES LT_BWART TYPE FIP_T_BWART_RANGE
 
     CLEAR: LS_RMOV, LV_LOW.
 
-    "LOW È CHAR30, converte para MATNR (18) com ALPHA
+    "LOW √© CHAR30, converte para MATNR (18) com ALPHA
     LV_LOW = LS_VALUE-LOW.
     CONDENSE LV_LOW NO-GAPS.
 
