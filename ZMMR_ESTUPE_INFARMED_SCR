@@ -18,7 +18,7 @@ INITIALIZATION.
            FILL_R_BWART_FROM_SET TABLES R_BWART_SD
                                  USING 'ZBWART_ESTUPE_SAIDAS',  "Tipo de movimento
            FILL_R_BWART_FROM_SET TABLES R_BWART_TR
-                                 USING ' ZBWART_ESTUPE_TRANSF'.  "Tipo de movimento
+                                 USING 'ZBWART_ESTUPE_TRANSF'.  "Tipo de movimento
 
 AT SELECTION-SCREEN OUTPUT.
   PERFORM LOCK_S_MATNR.
