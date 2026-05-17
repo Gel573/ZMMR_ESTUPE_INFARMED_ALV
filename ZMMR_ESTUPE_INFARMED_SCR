@@ -1,0 +1,24 @@
+*&---------------------------------------------------------------------*
+*& Include          ZMMR_ESTUPE_INFARMED_SCR
+*&---------------------------------------------------------------------*
+*----------------------------------------------------------------------*
+*  ZMMR_ESTUPE_INFARMED_SCR
+*----------------------------------------------------------------------*
+PARAMETERS:
+  P_ANO  TYPE GJAHR OBLIGATORY.
+
+SELECT-OPTIONS: S_MATNR FOR MARA-MATNR NO INTERVALS. "FOR MARA-MATNR NO INTERVALS.
+
+INITIALIZATION.
+  PERFORM: FILL_S_MATNR_FROM_SET,
+           FILL_R_BWART_FROM_SET TABLES R_BWART
+                                 USING 'ZBWART_THOM',  "Tipo de movimento
+           FILL_R_BWART_FROM_SET TABLES R_BWART_EN
+                                 USING 'ZBWART_ESTUPE_ENTRADAS',  "Tipo de movimento
+           FILL_R_BWART_FROM_SET TABLES R_BWART_SD
+                                 USING 'ZBWART_ESTUPE_SAIDAS',  "Tipo de movimento
+           FILL_R_BWART_FROM_SET TABLES R_BWART_TR
+                                 USING ' ZBWART_ESTUPE_TRANSF'.  "Tipo de movimento
+
+AT SELECTION-SCREEN OUTPUT.
+  PERFORM LOCK_S_MATNR.

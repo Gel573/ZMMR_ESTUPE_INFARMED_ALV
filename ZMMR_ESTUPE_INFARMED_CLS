@@ -1,0 +1,305 @@
+*&---------------------------------------------------------------------*
+*& Include          ZMMR_ESTUPE_INFARMED_CLS
+*&---------------------------------------------------------------------*
+*----------------------------------------------------------------------*
+*  ZMMR_ESTUPE_INFARMED_CLS
+*----------------------------------------------------------------------*
+
+*----------------------------------------------------------------------*
+* Event handler toolbar / user command
+*----------------------------------------------------------------------*
+CLASS LCL_EVENTS DEFINITION.
+  PUBLIC SECTION.
+    METHODS:
+      SET_DATA_REF IMPORTING IR_TAB TYPE REF TO DATA,
+      SET_GRID_REF IMPORTING IO_GRID TYPE REF TO CL_GUI_ALV_GRID,
+      ON_TOOLBAR FOR EVENT TOOLBAR OF CL_GUI_ALV_GRID
+        IMPORTING E_OBJECT E_INTERACTIVE,
+      ON_USER_COMMAND FOR EVENT USER_COMMAND OF CL_GUI_ALV_GRID
+        IMPORTING E_UCOMM.
+
+    METHODS ON_HOTSPOT_CLICK
+                  FOR EVENT HOTSPOT_CLICK OF CL_GUI_ALV_GRID
+      IMPORTING E_ROW_ID E_COLUMN_ID ES_ROW_NO.
+
+  PRIVATE SECTION.
+    DATA MR_TAB TYPE REF TO DATA.
+    DATA MO_GRID TYPE REF TO CL_GUI_ALV_GRID.
+ENDCLASS.
+
+CLASS LCL_EVENTS IMPLEMENTATION.
+  METHOD SET_DATA_REF.
+    MR_TAB = IR_TAB.
+  ENDMETHOD.
+
+  METHOD ON_TOOLBAR.
+    DATA LS_BTN TYPE STB_BUTTON.
+
+    "--- Selecionar Tudo
+    CLEAR LS_BTN.
+    LS_BTN-FUNCTION  = C_UCOMM_SELALL.
+    LS_BTN-ICON      = ICON_SELECT_ALL.   "se não existir, remove o icon
+    LS_BTN-QUICKINFO = 'Marcar todas as linhas'.
+    LS_BTN-TEXT      = 'Marcar tudo'.
+    INSERT LS_BTN INTO TABLE E_OBJECT->MT_TOOLBAR.
+
+    "--- Desmarcar Tudo
+    CLEAR LS_BTN.
+    LS_BTN-FUNCTION  = C_UCOMM_DESELALL.
+    LS_BTN-ICON      = ICON_DESELECT_ALL. "se não existir, remove o icon
+    LS_BTN-QUICKINFO = 'Desmarcar todas as linhas'.
+    LS_BTN-TEXT      = 'Desmarcar tudo'.
+    INSERT LS_BTN INTO TABLE E_OBJECT->MT_TOOLBAR.
+
+    CLEAR LS_BTN.
+    LS_BTN-FUNCTION  = C_UCOMM_REFRESH.
+    LS_BTN-ICON      = ICON_REFRESH.
+    LS_BTN-QUICKINFO = 'Atualizar relatório'.
+    LS_BTN-TEXT      = 'Refresh'.
+    LS_BTN-DISABLED  = SPACE.
+    INSERT LS_BTN INTO TABLE E_OBJECT->MT_TOOLBAR.
+
+    CLEAR LS_BTN.
+    LS_BTN-FUNCTION  = C_UCOMM_INFARMED.
+    LS_BTN-ICON      = ICON_PRINT. "ou icon_pdf
+    LS_BTN-QUICKINFO = 'Gerar INFARMED'.
+    LS_BTN-TEXT      = 'Gerar INFARMED'.
+    LS_BTN-DISABLED  = SPACE.
+    INSERT LS_BTN INTO TABLE E_OBJECT->MT_TOOLBAR.
+  ENDMETHOD.
+
+  METHOD ON_USER_COMMAND.
+    CASE E_UCOMM.
+      WHEN C_UCOMM_SELALL.
+        PERFORM ALV_SELECT_ALL.
+      WHEN C_UCOMM_DESELALL.
+        PERFORM ALV_DESELECT_ALL.
+      WHEN C_UCOMM_INFARMED.
+        PERFORM INFARMED_POPUP_AND_RUN USING GO_GRID.
+      WHEN C_UCOMM_REFRESH.
+        PERFORM ALV_REFRESH.
+    ENDCASE.
+  ENDMETHOD.
+
+  METHOD SET_GRID_REF.
+    MO_GRID = IO_GRID.
+  ENDMETHOD.
+
+  METHOD ON_HOTSPOT_CLICK.
+    DATA: LS_OUT   TYPE TY_OUT,
+          LV_REG   TYPE STRING,
+          LV_PO    TYPE EBELN,
+          LV_PR    TYPE BANFN,
+          LV_MBLNR TYPE MBLNR,
+          LV_MJAHR TYPE MJAHR,
+          LV_MATNR TYPE MATNR.
+
+    "Ler linha clicada
+    READ TABLE GT_OUT INTO LS_OUT INDEX E_ROW_ID-INDEX.
+    IF SY-SUBRC <> 0.
+      RETURN.
+    ENDIF.
+
+    CASE E_COLUMN_ID-FIELDNAME.
+
+      WHEN 'MATNR'.
+        "Drilldown Material (MM03)
+        LV_MATNR = LS_OUT-MATNR.
+        IF LV_MATNR IS INITIAL.
+          RETURN.
+        ENDIF.
+
+        SET PARAMETER ID 'MAT' FIELD LV_MATNR.
+        CALL TRANSACTION 'MM03' AND SKIP FIRST SCREEN.
+        RETURN.
+
+      WHEN 'REGISTO'.
+        "REGISTO contém texto do tipo: "Req / PO 4500001627 / Doc 5000230470"
+        LV_REG = LS_OUT-REGISTO.
+
+        "1) Tentativa: usar EBELN/BANFN/MBLNR da própria linha (melhor)
+        IF LS_OUT-EBELN IS NOT INITIAL.
+          SET PARAMETER ID 'BES' FIELD LS_OUT-EBELN. "EBELN
+          CALL TRANSACTION 'ME23N' AND SKIP FIRST SCREEN.
+          RETURN.
+        ENDIF.
+
+        IF LS_OUT-BANFN IS NOT INITIAL.
+          SET PARAMETER ID 'BAN' FIELD LS_OUT-BANFN. "BANFN
+          CALL TRANSACTION 'ME53N' AND SKIP FIRST SCREEN.
+          RETURN.
+        ENDIF.
+
+        IF LS_OUT-MBLNR IS NOT INITIAL.
+          SET PARAMETER ID 'MBN' FIELD LS_OUT-MBLNR. "MBLNR
+          IF LS_OUT-MJAHR IS NOT INITIAL.
+            SET PARAMETER ID 'MJA' FIELD LS_OUT-MJAHR.
+          ENDIF.
+          CALL TRANSACTION 'MB03' AND SKIP FIRST SCREEN.
+          RETURN.
+        ENDIF.
+
+        "2) Fallback: parse texto do REGISTO para extrair números
+        PERFORM PARSE_REGISTO USING LV_REG
+        CHANGING LV_PO LV_PR LV_MBLNR.
+
+        IF LV_PO IS NOT INITIAL.
+          SET PARAMETER ID 'BES' FIELD LV_PO.
+          CALL TRANSACTION 'ME23N' AND SKIP FIRST SCREEN.
+          RETURN.
+        ENDIF.
+
+        IF LV_PR IS NOT INITIAL.
+          SET PARAMETER ID 'BAN' FIELD LV_PR.
+          CALL TRANSACTION 'ME53N' AND SKIP FIRST SCREEN.
+          RETURN.
+        ENDIF.
+
+        IF LV_MBLNR IS NOT INITIAL.
+          SET PARAMETER ID 'MBN' FIELD LV_MBLNR.
+          IF LS_OUT-MJAHR IS NOT INITIAL.
+            SET PARAMETER ID 'MJA' FIELD LS_OUT-MJAHR.
+          ENDIF.
+          CALL TRANSACTION 'MB03' AND SKIP FIRST SCREEN.
+          RETURN.
+        ENDIF.
+
+      WHEN 'LOTE'.
+        IF LS_OUT-MATNR IS INITIAL OR LS_OUT-LOTE IS INITIAL.
+          RETURN.
+        ENDIF.
+
+        SET PARAMETER ID 'MAT' FIELD LS_OUT-MATNR.
+        SET PARAMETER ID 'CHA' FIELD LS_OUT-LOTE.
+        IF LS_OUT-WERKS IS NOT INITIAL.
+          SET PARAMETER ID 'WRK' FIELD LS_OUT-WERKS.
+        ENDIF.
+        CALL TRANSACTION 'MSC3N' AND SKIP FIRST SCREEN.
+      WHEN 'DOCUMENTO'.
+        IF LS_OUT-MBLNR IS NOT INITIAL.
+          SET PARAMETER ID 'MBN' FIELD LS_OUT-MBLNR. "MBLNR
+          IF LS_OUT-MJAHR IS NOT INITIAL.
+            SET PARAMETER ID 'MJA' FIELD LS_OUT-MJAHR.
+          ENDIF.
+          CALL TRANSACTION 'MB03' AND SKIP FIRST SCREEN.
+          RETURN.
+        ENDIF.
+      WHEN OTHERS.
+        RETURN.
+    ENDCASE.
+  ENDMETHOD.
+ENDCLASS.
+
+"===========================================================
+" Classe LOCAL: gerar PDF via Smartform (OTF -> PDF)
+"===========================================================
+CLASS LCL_ESTUPE_PDF DEFINITION FINAL.
+  PUBLIC SECTION.
+    CLASS-METHODS GENERATE_PDF_SMARTFORM
+      IMPORTING
+        IT_SEL_OUT    TYPE STANDARD TABLE
+      RETURNING
+        VALUE(RV_PDF) TYPE XSTRING.
+ENDCLASS.
+
+CLASS LCL_ESTUPE_PDF IMPLEMENTATION.
+
+  METHOD GENERATE_PDF_SMARTFORM.
+
+    DATA: LV_FM_NAME  TYPE RS38L_FNAM,
+          LS_CTRL     TYPE SSFCTRLOP,
+          LS_COMP     TYPE SSFCOMPOP,
+          LS_JOBINFO  TYPE SSFCRESCL,
+          LT_OTF      TYPE TT_ITCOO,
+          LT_LINES    TYPE STANDARD TABLE OF TLINE,
+          LT_BIN      TYPE SOLIX_TAB,
+          LV_BIN_SIZE TYPE I.
+
+    CLEAR RV_PDF.
+
+    "FM do Smartform
+    CALL FUNCTION 'SSF_FUNCTION_MODULE_NAME'
+      EXPORTING
+        FORMNAME           = C_SMARTFORM_NAME   "ZSF_ESTUPE_LISTAGEM
+      IMPORTING
+        FM_NAME            = LV_FM_NAME
+      EXCEPTIONS
+        NO_FORM            = 1
+        NO_FUNCTION_MODULE = 2
+        OTHERS             = 3.
+    IF SY-SUBRC <> 0 OR LV_FM_NAME IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    "Gerar OTF (sem diálogo)
+    CLEAR: LS_CTRL, LS_COMP, LS_JOBINFO.
+    LS_CTRL-NO_DIALOG = 'X'.
+    LS_CTRL-GETOTF    = 'X'.
+    LS_CTRL-DEVICE    = 'PRINTER'.
+
+    LS_COMP-TDNEWID = 'X'.
+    LS_COMP-TDIMMED = 'X'.
+
+    CALL FUNCTION LV_FM_NAME
+      EXPORTING
+        CONTROL_PARAMETERS = LS_CTRL
+        OUTPUT_OPTIONS     = LS_COMP
+        USER_SETTINGS      = SPACE
+        "is_header          = gs_header   "<<< ajuste se existir
+      IMPORTING
+        JOB_OUTPUT_INFO    = LS_JOBINFO
+      TABLES
+        IT_ITEMS           = IT_SEL_OUT  "<<< ajuste para o nome real do table param
+      EXCEPTIONS
+        FORMATTING_ERROR   = 1
+        INTERNAL_ERROR     = 2
+        SEND_ERROR         = 3
+        USER_CANCELED      = 4
+        OTHERS             = 5.
+    IF SY-SUBRC <> 0.
+      RETURN.
+    ENDIF.
+
+    LT_OTF[] = LS_JOBINFO-OTFDATA[].
+    IF LT_OTF IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    "OTF -> PDF (BIN)
+    CALL FUNCTION 'CONVERT_OTF'
+      EXPORTING
+        FORMAT                = 'PDF'
+      IMPORTING
+        BIN_FILESIZE          = LV_BIN_SIZE
+      TABLES
+        OTF                   = LT_OTF
+        LINES                 = LT_LINES
+        BIN_FILE              = LT_BIN
+      EXCEPTIONS
+        ERR_MAX_LINEWIDTH     = 1
+        ERR_FORMAT            = 2
+        ERR_CONV_NOT_POSSIBLE = 3
+        ERR_BAD_OTF           = 4
+        OTHERS                = 5.
+    IF SY-SUBRC <> 0 OR LT_BIN IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    "BIN -> XSTRING
+    CALL FUNCTION 'SCMS_BINARY_TO_XSTRING'
+      EXPORTING
+        INPUT_LENGTH = LV_BIN_SIZE
+      IMPORTING
+        BUFFER       = RV_PDF
+      TABLES
+        BINARY_TAB   = LT_BIN
+      EXCEPTIONS
+        FAILED       = 1
+        OTHERS       = 2.
+    IF SY-SUBRC <> 0.
+      CLEAR RV_PDF.
+    ENDIF.
+
+  ENDMETHOD.
+
+ENDCLASS.

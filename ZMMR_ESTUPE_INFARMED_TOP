@@ -1,0 +1,119 @@
+*&---------------------------------------------------------------------*
+*& Include          ZMMR_ESTUPE_INFARMED_TOP
+*&---------------------------------------------------------------------*
+*----------------------------------------------------------------------*
+*  ZMMR_ESTUPE_INFARMED_TOP
+*----------------------------------------------------------------------*
+TYPE-POOLS: ICON.
+
+TABLES: MARA,MSEG.
+
+*----------------------------------------------------------------------*
+* Tipos de saída (tabela final do ALV)
+*----------------------------------------------------------------------*
+TYPES: BEGIN OF TY_OUT,
+         MATNR     TYPE MATNR18,
+         WERKS     TYPE WERKS_D,
+         LGORT     TYPE LGORT_D,
+         BUDAT     TYPE BUDAT,
+         MBLNR     TYPE MBLNR,
+         ZEILE     TYPE MBLPO,
+         REGISTO   TYPE CHAR80,
+         DOCUMENTO TYPE CHAR120,
+         MAKTX     TYPE MAKTX,
+         TIPO      TYPE CHAR2,     "EN / SD
+         MENGE     TYPE MENGE_D,
+         MEINS     TYPE MEINS,
+         STOCK     TYPE MENGE_D,   "saldo após movimento
+         LOTE      TYPE CHARG_D,
+         SERV_FORN TYPE CHAR80,
+         DESCR     TYPE CHAR80,
+         "internos p/ lógica/ordenação
+         BWART     TYPE BWART,
+         MJAHR     TYPE MJAHR,
+         EBELN     TYPE EBELN,
+         EBELP     TYPE EBELP,
+         BANFN     TYPE BANFN,
+         KOSTL     TYPE KOSTL,
+         CONSU     TYPE MSEG-SGTXT,
+       END OF TY_OUT.
+
+TYPES: BEGIN OF TY_VENDOR,
+  "           EBELN TYPE EBELN,
+  MBLNR TYPE MBLNR,
+  LIFNR TYPE LIFNR,
+  NAME1 TYPE LFA1-NAME1,
+END OF TY_VENDOR.
+
+*----------------------------------------------------------------------*
+* Tipos auxiliares (para seleção base)
+*----------------------------------------------------------------------*
+TYPES: BEGIN OF TY_BASE,
+         BUDAT TYPE BUDAT,
+         MBLNR TYPE MBLNR,
+         MJAHR TYPE MJAHR,
+         ZEILE TYPE MBLPO,
+         MATNR TYPE MATNR,
+         WERKS TYPE WERKS_D,
+         LGORT TYPE LGORT_D,
+         BWART TYPE BWART,
+         MENGE TYPE MENGE_D,
+         MEINS TYPE MEINS,
+         SGTXT TYPE MSEG-SGTXT,
+         EBELN TYPE EBELN,
+         EBELP TYPE EBELP,
+         KOSTL TYPE KOSTL,
+         CHARG TYPE CHARG_D,
+         LIFNR TYPE ELIFN,
+       END OF TY_BASE.
+
+TYPES: TT_BASE TYPE STANDARD TABLE OF TY_BASE WITH DEFAULT KEY.
+
+TYPES: BEGIN OF TY_DOCID,
+         MBLNR TYPE MBLNR,
+         MJAHR TYPE MJAHR,
+       END OF TY_DOCID.
+
+CLASS LCL_EVENTS DEFINITION DEFERRED.  "
+
+DATA:
+  GO_CONT   TYPE REF TO CL_GUI_CUSTOM_CONTAINER,
+  GO_GRID   TYPE REF TO CL_GUI_ALV_GRID,
+  GO_EVENTS TYPE REF TO LCL_EVENTS.
+
+" Fieldcatalog/layout
+DATA:
+  GT_FCAT TYPE LVC_T_FCAT,
+  GS_LAYO TYPE LVC_S_LAYO.
+
+" Range datas
+DATA:
+  GV_DATE_FROM TYPE DATS,
+  GV_DATE_TO   TYPE DATS.
+
+DATA: GO_PDFV_CONT TYPE REF TO CL_GUI_CUSTOM_CONTAINER,
+      GO_PDFV_HTML TYPE REF TO CL_GUI_HTML_VIEWER,
+      GV_PDF_XSTR  TYPE XSTRING,
+      GV_PDF_URL   TYPE CHAR255.
+
+DATA: GT_ROWS TYPE LVC_T_ROW,
+      GS_ROW  TYPE LVC_S_ROW,
+      GT_SEL  TYPE STANDARD TABLE OF TY_OUT WITH DEFAULT KEY,
+      GT_DOCS TYPE SORTED TABLE OF TY_DOCID WITH UNIQUE KEY MBLNR MJAHR.
+
+DATA:
+      GT_OUT TYPE STANDARD TABLE OF TY_OUT WITH DEFAULT KEY.
+
+DATA: GT_VENDOR TYPE STANDARD TABLE OF TY_VENDOR WITH DEFAULT KEY.
+
+RANGES: R_BWART    FOR MSEG-BWART,
+        R_BWART_TR FOR MSEG-BWART,
+        R_BWART_EN FOR MSEG-BWART,
+        R_BWART_SD FOR MSEG-BWART.
+
+CONSTANTS:
+  C_UCOMM_INFARMED TYPE SYUCOMM VALUE 'ZINFM',          "novo botão
+  C_UCOMM_REFRESH  TYPE SYUCOMM VALUE 'ZREF',
+  C_UCOMM_SELALL   TYPE SYUCOMM VALUE 'ZALL',
+  C_UCOMM_DESELALL TYPE SYUCOMM VALUE 'ZNONE',
+  C_SMARTFORM_NAME TYPE TDSFNAME VALUE 'ZSF_ESTUPE_LISTAGEM'. "smartform

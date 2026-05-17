@@ -1,0 +1,58 @@
+*----------------------------------------------------------------------*
+* Report.....: ZMMR_ESTUPE_INFARMED
+* Descrição..: Listagem Obrigatória para artigos Estupefacientes (INFARMED)
+* Objetivo...: Gerar listagem anual (ano civil) dos movimentos de entrada/saída
+*              de substâncias controladas (mov. 101/201/301), desde a compra
+*              ao débito ao utente, para envio ao INFARMED (homologação),
+*              com geração de PDF via Adobe Form e envio por e-mail.
+*
+* Módulos.....: MM / LOG
+* Ambiente....: SAP S/4HANA
+*
+* Entrada.....: P_ANO  - Ano civil (obrigatório)
+*
+* Saída.......: ALV GRID OO (visualização/filtragem/ordenação)
+*              PDF oficial via Adobe Form (SFP) anexado no e-mail.
+*
+* Regras......: - Considerar movimentos 101 (Entrada), 201 e 301 (Saída) *
+*              - "Registo": Req (BANFN) / PO (EBELN) / Doc Material (MBLNR)
+*              - "Documento": "Consumo ao doente - <texto>" via MSEG-SGTXT
+*              - "Serv./Forn.": Entrada = Fornecedor (EKKO/LFA1);
+*                               Saída   = Serviço (centro de custo CSKT)
+*              - "Stock": saldo calculado (running balance) por
+*                         Material/Centro/Depósito após cada movimento.
+*              - Ordenação final: Data (BUDAT), Doc Material, Item.
+*
+* Adobe Form..: ZAF_ESTUPE_LISTAGEM
+* Interface...: ZIF_ESTUPE_LISTAGEM (IS_HEADER / IT_ITEMS)
+*
+* Autor.......: Andre Oliveira
+* Data........: 2026-01-13
+* Versão......: 1.0
+*
+* Histórico...:
+*   1.0 - 2026-01-13 - Andre Oliveira - Versão inicial (ALV + PDF Adobe + Email)
+*
+* Observações.: - Envio de e-mail depende de SCOT/SOST configurado (SMTP).
+*              - ADS (Adobe Document Services) deve estar ativo para gerar PDF.
+*              - Regra do mov. 301 pode ser refinada (origem/destino) se
+*                houver execução por centro/deposito específico.
+*----------------------------------------------------------------------*
+REPORT ZMMR_ESTUPE_INFARMED_ALV.
+
+INCLUDE ZMMR_ESTUPE_INFARMED_TOP.
+INCLUDE ZMMR_ESTUPE_INFARMED_SCR.
+START-OF-SELECTION.
+  PERFORM GET_DATA.
+  IF GT_OUT IS INITIAL.
+    MESSAGE 'Sem dados para o ano informado.' TYPE 'I'.
+    RETURN.
+  ENDIF.
+
+  PERFORM CALC_STOCK.
+  PERFORM DISPLAY_ALV.
+
+  INCLUDE ZMMR_ESTUPE_INFARMED_CLS.
+  INCLUDE ZMMR_ESTUPE_INFARMED_FORMS.
+
+INCLUDE zmmr_estupe_infarmed_alv_sto01.

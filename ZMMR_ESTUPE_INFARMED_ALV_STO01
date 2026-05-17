@@ -1,0 +1,85 @@
+*----------------------------------------------------------------------*
+***INCLUDE ZMMR_ESTUPE_INFARMED_ALV_STO01.
+*----------------------------------------------------------------------*
+*---------------------------------------------------------------------*
+* Screen 200 - PBO
+* (Criar a screen com custom control CC_ALV e PF-STATUS MAIN)
+*---------------------------------------------------------------------*
+MODULE STATUS_0200 OUTPUT.
+
+  SET PF-STATUS 'MAIN'.
+
+  IF GO_CONT IS INITIAL.
+
+    CREATE OBJECT GO_CONT
+      EXPORTING
+        CONTAINER_NAME = 'CC_ALV'.
+
+    CREATE OBJECT GO_GRID
+      EXPORTING
+        I_PARENT = GO_CONT.
+
+    "Fieldcatalog/layout
+    PERFORM BUILD_FCAT CHANGING GT_FCAT.
+
+    CLEAR GS_LAYO.
+    GS_LAYO-ZEBRA      = ABAP_TRUE.
+    GS_LAYO-CWIDTH_OPT = ABAP_TRUE.
+    GS_LAYO-SEL_MODE   = 'A'.
+
+    "Eventos toolbar
+    IF GO_EVENTS IS INITIAL.
+      CREATE OBJECT GO_EVENTS.
+      DATA LR_TAB TYPE REF TO DATA.
+      GET REFERENCE OF GT_OUT INTO LR_TAB.
+      GO_EVENTS->SET_DATA_REF( LR_TAB ).
+      GO_EVENTS->SET_GRID_REF( GO_GRID ).
+      SET HANDLER GO_EVENTS->ON_TOOLBAR      FOR GO_GRID.
+      SET HANDLER GO_EVENTS->ON_USER_COMMAND FOR GO_GRID.
+    ENDIF.
+
+    SET HANDLER GO_EVENTS->ON_HOTSPOT_CLICK FOR GO_GRID.
+
+    GO_GRID->SET_TABLE_FOR_FIRST_DISPLAY(
+    EXPORTING
+      IS_LAYOUT       = GS_LAYO
+    CHANGING
+      IT_FIELDCATALOG = GT_FCAT
+      IT_OUTTAB       = GT_OUT ).
+
+    CALL METHOD GO_GRID->SET_TOOLBAR_INTERACTIVE.
+  ENDIF.
+
+ENDMODULE.
+
+*---------------------------------------------------------------------*
+* Screen 200 - PAI
+*---------------------------------------------------------------------*
+MODULE USER_COMMAND_0200 INPUT.
+  CASE SY-UCOMM.
+    WHEN 'BACK' OR 'CANC' OR 'EXIT'.
+      LEAVE TO SCREEN 0.
+  ENDCASE.
+ENDMODULE.
+
+
+*&---------------------------------------------------------------------*
+*& Module STATUS_0210 OUTPUT
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+MODULE STATUS_0210 OUTPUT.
+  SET PF-STATUS 'HTTPV'.
+  SET TITLEBAR 'HTT'.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_0210  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE USER_COMMAND_0210 INPUT.
+  CASE SY-UCOMM.
+    WHEN 'BACK' OR 'CANC' OR 'EXIT'.
+      LEAVE TO SCREEN 0.
+  ENDCASE.
+ENDMODULE.
